@@ -20,26 +20,39 @@ _kwargs = {
 
 
 class Dataset:
+    """
+    Class used to store data points and perform fitting.
+    """
+
     def __init__(
-        self, x_obs, y_obs, x_err, y_err, corr=None, y_threshold=None,
+        self,
+        x_obs,
+        y_obs,
+        x_err,
+        y_err,
+        corr=0.0,
+        y_threshold=None,
     ):
-
         """
-        Class for your data points.
-
-        Args:
-            x_obs (array-like): your data points along the x-axis,
-            y_obs (array-like): your data points along the y-axis,
-            x_err (array-like): your observationnal errors on points
-                along the x-axis,
-            y_err (array-like): your observationnal errors on points
-                along the y-axis,
-            corr (float or array-like): correlation coefficients
-                between x and y,
-            y_threshold (float or array-like): the cut in y, can be
-                an array for box-like selection
+        Parameters
+        ----------
+        x_obs : np.ndarray
+            Data points along the x axis
+        y_obs : np.ndarray
+            Data points along the y axis
+        x_err : np.ndarray
+            1 sigma uncertainties along the x axis
+        y_err : np.ndarray
+            1 sigma uncertainties along the y axis
+        corr : np.ndarray or float, optional
+            Correlation coefficient between x and y uncertainties,
+            by default 0.
+            If a float, the same correlation is assumed for each
+                data point.
+            If an array, interpreted as one coefficient per data point.
+        y_threshold : np.ndarray or float, optional
+            _description_, by default None
         """
-
         self.x_obs = x_obs
         self.y_obs = y_obs
         self.x_err = x_err
@@ -48,13 +61,12 @@ class Dataset:
         self.n_pts = self.x_obs.shape[0]
 
         # ======== Correlated errors
-        if corr is None:
-            corr = np.zeros(self.n_pts)
-        elif isinstance(corr, float) or isinstance(corr, int):
+        if isinstance(corr, float) or isinstance(corr, int):
             corr = np.ones(self.n_pts) * corr
         self.corr = corr
 
-        # self.covmats[i, :, :] is the error covariance matrix for the ith data point
+        # self.covmats[i, :, :] is the error covariance matrix for the
+        # ith data point
         self.covmats = np.array(
             [
                 [
@@ -138,24 +150,24 @@ class Dataset:
         beta_num = np.cov(self.x_obs, self.y_obs, ddof=1)[0, 1] - np.average(
             self.covmats[:, 0, 1]
         )
-        beta_den = np.var(self.x_obs, ddof=1) - np.average(self.x_err ** 2)
+        beta_den = np.var(self.x_obs, ddof=1) - np.average(self.x_err**2)
         beta = beta_num / beta_den
 
         # ======== Intercept
         alpha = np.average(self.y_obs) - beta * np.average(self.x_obs)
 
         # ======== Scatter, Pratt+09 eqs 3&4
-        vi = self.y_err ** 2 + (beta * self.x_err) ** 2
+        vi = self.y_err**2 + (beta * self.x_err) ** 2
         wi = (1 / vi) / np.average(1 / vi)
         V_raw = (1 / (self.n_pts - 2)) * np.sum(
             wi * (self.y_obs - beta * self.x_obs - alpha) ** 2
         )
         V_orth = V_raw - (
-            (1.0 / (beta ** 2 + 1))
+            (1.0 / (beta**2 + 1))
             * (
                 (beta * self.x_err) ** 2
                 - 2 * beta * self.corr * self.x_err * self.y_err
-                + self.y_err ** 2
+                + self.y_err**2
             )
         )  # intrinsic variance orthogonal to the regression line
         s_orth = np.sqrt(np.mean(V_orth))
@@ -249,47 +261,18 @@ class Dataset:
             name="LIRA",
         )
         rename_params(cc)
-        cc.configure(cmap="RdBu_r", sigmas=[1], summary=False)
+        cc.configure(cmap="RdBu_r", sigmas=[1, 2], summary=False)
 
         # Corner plot
         fig_corner = cc.plotter.plot(figsize=(8, 8), truth=truth)
         fig_corner.subplots_adjust(hspace=0, wspace=0)
         fig_corner.align_labels()
-        fig_corner.savefig(self.path_to_results + "/corner.pdf")
 
         # Trace plot
         fig_walk = cc.plotter.plot_walks(truth=truth)
         fig_walk.align_labels()
-        fig_walk.savefig(self.path_to_results + "/walk.pdf")
-        plt.close(fig_corner)
-        plt.close(fig_walk)
 
-        # Latent distribution + model
-        x = np.linspace(1.5 * self.x_obs.min(), 1.5 * self.x_obs.max(), 100)
-        y = 0.0 * x
-        cols = [""]
-        for i in range(nmix - 1):
-            cols.append(f".mixture.{i+2}.")
-        for i, col in enumerate(cols):
-            mu = np.median(chains["mu.Z.0" + col])
-            sigma = np.median(chains["sigma.Z.0" + col])
-            pi = np.median(chains[f"pi.{i+1}."])
-            y += pi * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
-        y /= np.trapz(y, x)
-        fig_hist, ax = plt.subplots()
-        ax.hist(
-            self.x_obs,
-            bins=self.n_pts // 5,
-            density=True,
-            alpha=0.3,
-            color="tab:blue",
-            label="Data",
-        )
-        ax.plot(x, y, color="tab:blue", label="Modeled distribution")
-        ax.set_xlabel(self.xlabel)
-        ax.legend(frameon=False)
-        fig_hist.savefig(self.path_to_results + "/hist.pdf")
-        plt.close(fig_hist)
+        return fig_corner, fig_walk
 
     # ------------------------------------------------------- #
 
@@ -297,13 +280,17 @@ class Dataset:
         """
         Make (x, y) plot
 
-        Args:
-            style (str): how to plot data points. Can be
-                "errb" (error bars), "ellipse" (error ellipses),
-                or "points" (no uncertainty representation)
+        Parameters
+        ----------
+        style : str
+            How to plot data points. Can be
+            "errb" (error bars), "ellipse" (error ellipses),
+            or "points" (no uncertainty representation)
 
-        Returns:
-            (tuple) fig, ax
+        Returns
+        -------
+            tuple
+                fig, ax
         """
 
         kw = _kwargs
@@ -359,10 +346,37 @@ class Dataset:
     ):
         """
         Plots a line with $y = alpha + beta x$ on an axis.
-        You should put the `xlims` before using this function,
+
+        Parameters
+        ----------
+        ax : plt.Axes
+            Axis in which to draw the plot.
+        alpha : float or np.ndarray
+            Intercept value(s), see Notes
+        beta : float or np.ndarray
+            Slope value(s), see Notes
+        label: str
+            Legend label for the plotted line (or confidence region).
+        addeq: bool
+            For a single line, add the line equation to the legend
+            label, by default True.
+        setlims: bool
+            fix the y-axis limits as what they are at the end of the
+            function run.
+        **kwargs: dict
+            Instructions for the plotting function.
+            Will be passed to `plt.plot` (if alpha and beta are floats)
+            or `plt.fill_between` (if they are arrays).
+
+        Notes
+        =====
+        * You should put the `xlims` before using this function,
             as it uses `ax.get_xlims` to span across the whole
             subplot.
-        `label` will be added the line equation if `addeq=True`
+
+        * If alpha and beta are floats, only one line is drawn.
+            If they are arrays array, a line is computed for each value,
+            and only the [16%, 84%] confidence interval is shown.
         """
         x_span = np.array(ax.get_xlim())
         ax.set_xlim(*x_span)
@@ -387,4 +401,3 @@ class Dataset:
             ax.fill_between(
                 x, pct[0], pct[1], alpha=0.3, label=label, **kwargs
             )
-
