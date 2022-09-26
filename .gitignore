@@ -1,0 +1,5 @@
+./build
+./__pycache__
+./pylira/__pycache__
+.pylira.egg-info
+.ipynb_checkpoints
