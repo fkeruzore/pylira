@@ -1,4 +1,9 @@
 function(d, nsteps, nmix, ...){
+    
+    install_has_lira <- require("lira")
+    if(!install_has_lira) {
+        install.packages("lira")
+    }
     library(lira)
     
     cmd <- paste(
