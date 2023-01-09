@@ -31,6 +31,7 @@ class Dataset:
         x_err,
         y_err,
         corr=0.0,
+        x_threshold=None,
         y_threshold=None,
     ):
         """
@@ -50,8 +51,12 @@ class Dataset:
             If a float, the same correlation is assumed for each
                 data point.
             If an array, interpreted as one coefficient per data point.
+        x_threshold : np.ndarray or float, optional
+            Value at which the data was truncated along the x axis,
+            by default None
         y_threshold : np.ndarray or float, optional
-            _description_, by default None
+            Value at which the data was truncated along the y axis,
+            by default None
         """
         self.x_obs = x_obs
         self.y_obs = y_obs
@@ -83,7 +88,10 @@ class Dataset:
             ]
         )
 
-        # ======== y threshold for Malmquist
+        # ======== x&y thresholds for Malmquist
+        if isinstance(x_threshold, float) or isinstance(x_threshold, int):
+            x_threshold = np.ones(self.n_pts) * x_threshold
+        self.x_threshold = x_threshold
         if isinstance(y_threshold, float) or isinstance(y_threshold, int):
             y_threshold = np.ones(self.n_pts) * y_threshold
         self.y_threshold = y_threshold
@@ -104,6 +112,7 @@ class Dataset:
         x_err="x_err",
         y_err="y_err",
         corr=None,
+        x_threshold=None,
         y_threshold=None,
     ):
         return cls(
@@ -112,6 +121,9 @@ class Dataset:
             table[x_err].data,
             table[y_err].data,
             corr=table[corr].data if corr is not None else None,
+            x_threshold=table[x_threshold].data
+            if x_threshold is not None
+            else None,
             y_threshold=table[y_threshold].data
             if y_threshold is not None
             else None,
@@ -126,6 +138,8 @@ class Dataset:
         d["x_err"] = self.x_err
         d["y_err"] = self.y_err
         d["corr"] = self.corr
+        if self.x_threshold is not None:
+            d["x_threshold"] = self.x_threshold
         if self.y_threshold is not None:
             d["y_threshold"] = self.y_threshold
         return Table(d)
