@@ -208,7 +208,9 @@ class Dataset:
         """
 
         # Create R function to be ran
-        with open("r_script.R", "r") as f:
+        with open(
+            os.path.join(os.path.dirname(__file__), "r_script.R"), "r"
+        ) as f:
             rfunc_str = f.read()
 
         rfunc = ro.r(rfunc_str)

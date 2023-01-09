@@ -14,6 +14,8 @@ setup(
         "pandas",
         "scipy",
         "chainconsumer",
-        "rpy2"
+        "rpy2",
     ],
+    include_package_data=True,
+    package_data={"": ["./r_script.R"]},
 )
