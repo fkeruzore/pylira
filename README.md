@@ -8,9 +8,16 @@ From the official documentation:
 
 See official documentation (https://cran.r-project.org/web/packages/lira/lira.pdf) and accompanying paper (Sereno 2016, https://ui.adsabs.harvard.edu/abs/2016MNRAS.455.2149S/abstract)
 
-## Requirements
+## Installation
 
-`R`, `jags`
+* For the Python library, just clone this repository and install it via `pip`:
+
+```
+git clone git@github.com:fkeruzore/pylira.git
+cd pylira ; pip install .
+```
+
+* Other requirements: `R` and `jags` must be installed independently. Once that's done, the first call to `pylira` will take care of installing necessary R libraries if needed.
 
 ## Example
 
