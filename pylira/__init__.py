@@ -3,4 +3,4 @@
 __author__ = "Florian Keruzore"
 __email__ = "fkeruzore@anl.gov"
 
-from .pylira import Dataset
+from .pylira import Dataset, bootstrap_bces

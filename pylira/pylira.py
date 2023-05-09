@@ -417,3 +417,57 @@ class Dataset:
             ax.fill_between(
                 x, pct[0], pct[1], alpha=0.3, label=label, **kwargs
             )
+
+
+# ----------------------------------------------------------- #
+
+
+def bootstrap_bces(d: Dataset, n_boot=1000):
+    """
+    Estimates statistical uncertainties on scaling relation parameters
+    by bootstraping a BCES estimator.
+
+    Parameters
+    ----------
+    d : Dataset
+        The dataset to investigate
+    n_boot : int, optional
+        Number of resamplings, by default 100
+
+    Returns
+    -------
+    pd.DataFrame
+        BCES estimators of (alpha, beta, sigma) for all n_boot
+        resamplings
+    """
+    data_dict = d.__dict__
+    full_data = {
+        k: data_dict[k]
+        for k in [
+            "x_obs",
+            "y_obs",
+            "x_err",
+            "y_err",
+            "corr",
+            "x_threshold",
+            "y_threshold",
+        ]
+    }
+    n_pts = full_data["x_obs"].size
+
+    all_bces = []
+    for i in range(int(n_boot)):
+        which = np.random.randint(0, n_pts, n_pts)
+        data_i = {
+            k: (v[which] if v is not None else v) for k, v in full_data.items()
+        }
+        d_i = Dataset(**data_i)
+        bces_i = d_i.fit_bces(verbose=False)
+        all_bces.append(
+            {
+                par: bces_i[i]
+                for i, par in enumerate(["alpha", "beta", "sigma"])
+            }
+        )
+    all_bces = pd.DataFrame(all_bces)
+    return all_bces
