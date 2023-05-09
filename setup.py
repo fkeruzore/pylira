@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="pylira",
-    version="0.1.1",
+    version="0.1.2",
     description="pylira: Python wrapper for the LIRA R library",
     author="Florian Keruzore",
     author_email="fkeruzore@anl.gov",
